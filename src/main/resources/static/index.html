@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Line Counter - TMMC Assignemnt 1</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet"/>
+  <style>
+    * { font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif; }
+    body { background-color: #181818; color: white; margin: 0; -webkit-font-smoothing: antialiased; }
+    :root {
+      --primary:         #68ca85;
+      --primary-dark:    #3caa5d;
+      --bg-dark:         #161616;
+      --contour:         #252525;
+      --contour-light:   #3c3c3c;
+      --contour-lighter: #505050;
+      --secondary:       #bababa;
+    }
+    .btn-primary {
+      background-color: var(--primary);
+      color: #181818;
+      font-weight: 500;
+      transition: background-color 0.15s ease;
+    }
+    .btn-primary:hover  { background-color: var(--primary-dark); }
+    .btn-primary:active { transform: scale(0.98); }
+    .drop-zone {
+      border: 1px dashed var(--contour-lighter);
+      background-color: var(--bg-dark);
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--primary);
+      background-color: var(--contour);
+    }
+    .drop-zone.has-file {
+      border-color: var(--primary);
+      border-style: solid;
+    }
+    .result-circle {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      border: 2px solid var(--primary);
+      background-color: var(--bg-dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      animation: pop 0.3s ease;
+    }
+    @keyframes pop {
+      0%   { transform: scale(0.7); opacity: 0; }
+      100% { transform: scale(1);   opacity: 1; }
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6">
+  <div class="w-full max-w-sm">
+
+    <!-- Submission Form -->
+    <div id="uploadView">
+      <div class="mb-8">
+        <p class="text-xs font-medium uppercase tracking-widest mb-2" style="color: var(--primary)">TMMC Assignment 1</p>
+        <h1 class="text-2xl font-bold text-white">Image Line Counter</h1>
+        <p class="text-sm mt-1" style="color: var(--secondary)">Upload a black &amp; white JPG to count black vertical lines</p>
+      </div>
+
+      <form id="uploadForm">
+        <label id="dropZone" class="drop-zone flex flex-col items-center justify-center rounded-lg p-8 text-center cursor-pointer mb-3"
+          ondragover="event.preventDefault(); this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="event.preventDefault(); this.classList.remove('drag-over'); handleFiles(event.dataTransfer.files)">
+
+          <svg id="uploadIcon" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+            stroke="#68ca85" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-3">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+
+          <img id="preview" class="hidden mb-3 rounded max-h-32 object-contain" alt="preview" />
+
+          <p id="labelMain" class="text-sm font-medium text-white">Click to select image</p>
+          <p id="labelSub" class="text-xs mt-1" style="color: var(--secondary)">JPG only</p>
+
+          <input id="fileInput" type="file" name="image" accept=".jpg,.jpeg" class="hidden"
+            onchange="handleFiles(this.files)" />
+        </label>
+
+        <button type="button" onclick="handleSubmit()"
+          class="btn-primary w-full py-2.5 rounded-lg text-sm font-medium">
+          Count Lines
+        </button>
+
+        <p id="errorMsg" class="hidden text-xs mt-3 text-center" style="color:#f87171"></p>
+      </form>
+    </div>
+
+    <!-- Submission result -->
+    <div id="resultView" class="hidden flex flex-col items-center text-center">
+      <p class="text-xs font-medium uppercase tracking-widest mb-8" style="color: var(--primary)">Result</p>
+
+      <div class="result-circle mb-4">
+        <span id="resultCount" class="text-5xl font-bold text-white"></span>
+        <span class="text-xs mt-1" style="color: var(--secondary)">lines</span>
+      </div>
+
+      <p id="resultFile" class="text-xs mb-10" style="color: var(--secondary)"></p>
+
+      <button onclick="restart()"
+        class="btn-primary w-full py-2.5 rounded-lg text-sm font-medium">
+        Restart
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let selectedFile = null;
+
+    function handleFiles(files) {
+      const file = files[0];
+      if (!file) return;
+      selectedFile = file;
+
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      document.getElementById('fileInput').files = dt.files;
+
+      document.getElementById('dropZone').classList.add('has-file');
+      document.getElementById('uploadIcon').classList.add('hidden');
+      document.getElementById('labelMain').textContent = file.name;
+      document.getElementById('labelSub').textContent  = (file.size / 1024).toFixed(1) + ' KB · click to change';
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        const preview = document.getElementById('preview');
+        preview.src = e.target.result;
+        preview.classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleSubmit() {
+      if (!selectedFile) {
+        showError('Please select an image first.');
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append('image', selectedFile);
+
+      fetch('/api/count', { method: 'POST', body: fd })
+        .then(res => {
+          if (!res.ok) throw new Error('Server error: ' + res.status);
+          return res.json();
+        })
+        .then(count => showResult(count))
+        .catch(err => showError(err.message));
+    }
+
+    function showResult(count) {
+      document.getElementById('uploadView').classList.add('hidden');
+      document.getElementById('resultView').classList.remove('hidden');
+      document.getElementById('resultCount').textContent = count;
+      document.getElementById('resultFile').textContent  = selectedFile.name;
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    function restart() {
+      selectedFile = null;
+
+      // Reset form
+      document.getElementById('fileInput').value = '';
+      document.getElementById('dropZone').classList.remove('has-file');
+      document.getElementById('uploadIcon').classList.remove('hidden');
+      const preview = document.getElementById('preview');
+      preview.src = '';
+      preview.classList.add('hidden');
+      document.getElementById('labelMain').textContent = 'Click to select image';
+      document.getElementById('labelSub').textContent  = 'JPG only';
+      document.getElementById('errorMsg').classList.add('hidden');
+
+      // Swap views
+      document.getElementById('resultView').classList.add('hidden');
+      document.getElementById('uploadView').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
