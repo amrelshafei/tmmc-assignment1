@@ -12,6 +12,7 @@ java -cp out com.amrelshafei.tmmc.assignment1.cli.TmmcAssignment1ConsoleApp ./sr
 
 Run the following commands to compile a jar file instead:
 ```
+javac -d out $(find src/main/java/com/amrelshafei/tmmc/assignment1/cli -name "*.java")
 jar cfe target/tmmc-assignment1-cli.jar com.amrelshafei.tmmc.assignment1.cli.TmmcAssignment1ConsoleApp -C out .
 java -jar target/tmmc-assignment1-cli.jar ./src/test/resources/sample-images/img_1.jpg
 ```
